@@ -1,0 +1,2 @@
+dataset_path: data/prompts.jsonl
+output_path: outputs/results.jsonl
