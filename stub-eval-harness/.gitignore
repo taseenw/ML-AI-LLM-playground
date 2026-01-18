@@ -25,3 +25,6 @@ env/
 # Project specific
 outputs/
 *.log
+
+# Test outputs
+tests/test_outputs/
