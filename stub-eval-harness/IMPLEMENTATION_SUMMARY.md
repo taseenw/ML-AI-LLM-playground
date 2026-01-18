@@ -1,26 +1,29 @@
 # Eval Runner Implementation Summary
 
 ## Project Overview
-A Python CLI tool for running LLM evaluations with a clean, industry-standard structure. The project uses Typer for CLI, follows proper package structure, and implements a baseline evaluation runner with stub model responses.
+
+A Python CLI tool for running LLM evaluations. This is a stub/baseline project with a dummy model for learning purposes. Uses Typer for CLI and follows Python packaging best practices.
 
 ## Repository Structure
 
 ```
 stub-eval-harness/
 ├── pyproject.toml          # Package configuration and dependencies
-├── eval-run                # Executable wrapper script
+├── eval-run                 # Executable wrapper script (no .py extension)
 ├── .gitignore              # Git ignore rules
 ├── configs/
-│   └── config.yaml         # Configuration file
+│   └── config.yaml         # Configuration file (TODO: implement loading)
 ├── data/
 │   └── prompts.jsonl       # Input dataset (JSONL format)
 ├── outputs/
 │   └── results.jsonl       # Generated results (JSONL format)
 ├── src/
-│   └── eval_runner/         # Main package
+│   └── eval_runner/        # Main package
 │       ├── __init__.py     # Package initialization
 │       └── cli.py          # CLI implementation
-└── tests/                  # Test directory (to be implemented)
+└── tests/
+    ├── __init__.py
+    └── test_cli.py         # Simple pytest tests
 ```
 
 ## Implementation Details
@@ -40,6 +43,11 @@ dependencies = [
     "pyyaml>=6.0",
 ]
 
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+]
+
 # No entry point - using wrapper script instead (eval-run in repo root)
 
 [tool.setuptools]
@@ -48,12 +56,6 @@ package-dir = {"" = "src"}
 [tool.setuptools.packages.find]
 where = ["src"]
 ```
-
-**Key Points:**
-- Uses modern `pyproject.toml` for package configuration
-- Defines dependencies (typer for CLI, pyyaml for config loading)
-- Configured for `src/` layout (industry standard)
-- Uses wrapper script approach instead of entry points to avoid `.egg-info` clutter
 
 ### 2. CLI Wrapper Script (`eval-run`)
 
@@ -72,12 +74,6 @@ from eval_runner.cli import app
 if __name__ == "__main__":
     app()
 ```
-
-**Key Points:**
-- Executable script (no `.py` extension for cleaner command interface)
-- Uses shebang (`#!/usr/bin/env python3`) to run with Python
-- Dynamically adds `src/` to Python path for imports
-- Imports and executes the Typer app
 
 **Usage:** `./eval-run --config configs/config.yaml`
 
@@ -117,32 +113,42 @@ def dummyAIPass(prompt_object: dict):
     return response
 ```
 
-**Key Points:**
-- Uses Typer for CLI framework
-- `eval_run()` function accepts `--config` option (required)
-- Reads JSONL dataset from `data/prompts.jsonl`
-- Processes each prompt through `dummyAIPass()` stub function
-- Writes results to `outputs/results.jsonl` in JSONL format
-- Output format: `{"id": "...", "response": "..."}`
-
-**Current Status:**
-- ✅ CLI command working
-- ✅ JSONL reading implemented
-- ✅ JSONL writing implemented
-- ✅ Stub model function implemented
-- ⚠️ Config file loading not yet implemented (hardcoded paths)
-- ⚠️ Config validation not yet implemented
-- ⚠️ Tests not yet implemented
-
-### 4. Package Initialization (`src/eval_runner/__init__.py`)
+### 4. Tests (`tests/test_cli.py`)
 
 ```python
-# This file makes eval_runner a Python package
-```
+"""Simple tests for the eval_runner CLI functionality."""
+import json
+import sys
+from pathlib import Path
 
-**Key Points:**
-- Empty `__init__.py` makes the directory a Python package
-- Allows imports like `from eval_runner.cli import app`
+# Add src to path
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+
+from eval_runner.cli import dummyAIPass
+
+
+def test_dummy_ai_pass_returns_response_with_id():
+    """Test that dummyAIPass returns a response containing the prompt ID."""
+    prompt = {"id": "42", "prompt": "Test prompt"}
+    response = dummyAIPass(prompt)
+    
+    assert "42" in response
+    assert response == "dummy response for prompt with id: 42"
+
+
+def test_output_format():
+    """Test that output has correct JSON structure."""
+    prompt = {"id": "1", "prompt": "Test"}
+    response = dummyAIPass(prompt)
+    
+    output = {"id": prompt["id"], "response": response}
+    
+    # Verify structure
+    assert "id" in output
+    assert "response" in output
+    assert isinstance(output["id"], str)
+    assert isinstance(output["response"], str)
+```
 
 ### 5. Configuration File (`configs/config.yaml`)
 
@@ -150,12 +156,6 @@ def dummyAIPass(prompt_object: dict):
 dataset_path: data/prompts.jsonl
 output_path: outputs/results.jsonl
 ```
-
-**Key Points:**
-- YAML format for human-readable config
-- Defines input dataset path
-- Defines output results path
-- Currently not being used (paths are hardcoded in CLI)
 
 ### 6. Sample Dataset (`data/prompts.jsonl`)
 
@@ -165,11 +165,6 @@ output_path: outputs/results.jsonl
 {"id":"3","prompt":"Extract tags as a JSON list: 'I love basketball and lifting'."}
 ```
 
-**Key Points:**
-- JSONL format (one JSON object per line)
-- Each line has `id` and `prompt` fields
-- 3 sample prompts included
-
 ### 7. Sample Output (`outputs/results.jsonl`)
 
 ```json
@@ -178,122 +173,48 @@ output_path: outputs/results.jsonl
 {"id": "3", "response": "dummy response for prompt with id: 3"}
 ```
 
-**Key Points:**
-- JSONL format matching input structure
-- Each line has `id` and `response` fields
-- Generated by stub model function
+## How to Run
 
-## How It Works
-
-### Execution Flow
-
-1. **User runs command:**
-   ```bash
-   ./eval-run --config configs/config.yaml
-   ```
-
-2. **Wrapper script (`eval-run`):**
-   - Adds `src/` to Python path
-   - Imports `eval_runner.cli.app`
-   - Calls `app()` which starts Typer
-
-3. **Typer CLI (`cli.py`):**
-   - Parses `--config` argument
-   - Calls `eval_run(config="configs/config.yaml")`
-   - Currently ignores config file (hardcoded paths)
-
-4. **Evaluation loop:**
-   - Reads `data/prompts.jsonl`
-   - For each prompt, calls `dummyAIPass()`
-   - Collects responses in dictionary
-
-5. **Output writing:**
-   - Writes results to `outputs/results.jsonl`
-   - One JSON line per prompt with `id` and `response`
-
-## Design Decisions
-
-### Why wrapper script instead of entry points?
-- Avoids `.egg-info` directory clutter
-- No need for `pip install -e .`
-- Simpler for development
-- Still provides clean command interface
-
-### Why `src/` layout?
-- Industry standard for Python packages
-- Separates source code from other files
-- Makes package structure clear
-- Easier to test and maintain
-
-### Why Typer?
-- Modern CLI framework (built on Click)
-- Type hints support
-- Automatic help generation
-- Clean, Pythonic API
-
-## Next Steps (To Complete Requirements)
-
-1. **Config Loading:**
-   - Load YAML config file using `pyyaml`
-   - Extract `dataset_path` and `output_path`
-   - Use config values instead of hardcoded paths
-   - Add validation for required fields
-
-2. **Config Dataclass:**
-   - Create `RunConfig` dataclass
-   - Validate required fields
-   - Add model settings (provider, temperature, max_tokens)
-
-3. **Dataset Loader:**
-   - Create `load_dataset()` function
-   - Create `Example` dataclass
-   - Add error handling for invalid JSON/missing fields
-
-4. **Runner Improvements:**
-   - Add timing/latency tracking
-   - Add progress logging
-   - Implement proper model interface
-
-5. **Logging:**
-   - Add logging for run start
-   - Log dataset item count
-   - Log progress updates
-   - Log output location
-
-6. **Tests:**
-   - Config loader tests
-   - Dataset loader tests
-   - Runner tests
-   - Use pytest framework
-
-## Usage Examples
+### Run the CLI
 
 ```bash
-# Run evaluation
+cd stub-eval-harness
 ./eval-run --config configs/config.yaml
-
-# Show help
-./eval-run --help
 ```
+
+### Run Tests
+
+```bash
+cd stub-eval-harness
+python3 -m pytest tests/ -v
+```
+
+## Current Status
+
+| Feature | Status |
+|---------|--------|
+| CLI with `--config` option | ✅ Working |
+| JSONL dataset reading | ✅ Working |
+| JSONL output writing | ✅ Working |
+| Stub model function | ✅ Working |
+| Tests | ✅ 2 tests passing |
+| Config file loading | ⚠️ TODO (config accepted but not used yet) |
+
+## Next Steps
+
+1. **Implement config loading** — Use pyyaml to load `config.yaml` and use `dataset_path` and `output_path` instead of hardcoded paths
+2. **Add logging** — Add progress logging during evaluation
+3. **Add timing** — Track latency per prompt
 
 ## Dependencies
 
-- `typer>=0.9.0` - CLI framework
-- `pyyaml>=6.0` - YAML config parsing (declared but not yet used)
+- `typer>=0.9.0` — CLI framework
+- `pyyaml>=6.0` — YAML config parsing (declared, ready to use)
+- `pytest>=7.0.0` — Testing (dev dependency)
 
-## File Sizes & Line Counts
+## Design Decisions
 
-- `cli.py`: 32 lines
-- `eval-run`: 14 lines
-- `pyproject.toml`: 20 lines
-- `config.yaml`: 2 lines
-- `prompts.jsonl`: 3 lines
-- `results.jsonl`: 4 lines (generated)
-
-## Notes
-
-- All code follows Python best practices
-- Uses type hints where appropriate
-- Clean separation of concerns
-- Ready for extension with real model integration
-- Structure supports testing and maintainability
+1. **Wrapper script instead of entry point** — Avoids `.egg-info` clutter, simpler for development
+2. **`src/` layout** — Industry standard for Python packages
+3. **Simple tests** — Minimal tests that cover core functionality without over-engineering
+4. **JSONL format** — Standard for ML datasets, one JSON object per line
